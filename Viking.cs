@@ -49,7 +49,9 @@ namespace Viking{
     }
     public class Viking:SC2Tower{
         public override string Name=>"Viking";
-        public override UpgradeModel[]Upgrades(){
+        public override string Description=>"Terran transforming mech, can attack normal bloons on the ground and Moab class bloons in the air";
+        public override Faction TowerFaction=>Faction.Terran;
+        public override UpgradeModel[]GenerateUpgradeModels(){
             return new UpgradeModel[]{
                 new("Fighter Mode",900,0,new(){guidRef="Ui[Viking-AirIcon]"},0,0,0,"","Fighter Mode"),
                 new("Phobos Weapons Systems",2025,0,new(){guidRef="Ui[Viking-PhobosWeaponsIcon]"},0,1,0,"","Phobos Weapons Systems"),
@@ -58,6 +60,7 @@ namespace Viking{
                 new("Archangel",32670,0,new(){guidRef="Ui[Viking-ArchangelIcon]"},0,4,0,"","Archangel")
             };
         }
+        public override int MaxTier=>5;
         public override int MaxSelectQuote=>7;
         public override int MaxUpgradeQuote=>6;
         public override Dictionary<string,string>SoundNames=>new(){{"Ground","Viking-"},{"Air","Viking-"},{"DeimosGround","Viking-"},{"DeimosAir","Viking-"},
@@ -71,14 +74,14 @@ namespace Viking{
             details.pathTwoMax=0;
             details.pathThreeMax=0;
             details.popsRequired=0;
-            LocalizationManager.Instance.textTable.Add("Fighter Mode Description","Trains the pilot to transform the Viking into a fighter jet gaining bonus damage against Moab's. Only targets Moab's in Fighter Mode");
-            LocalizationManager.Instance.textTable.Add("Phobos Weapons Systems Description","Increases range and damage in both modes");
-            LocalizationManager.Instance.textTable.Add("Deimos Description","Modified with questionable mercenary equipment. More pierce, damage, faster firing and can pop Lead Bloons");
-            LocalizationManager.Instance.textTable.Add("Sky Fury Description","Doubles damage dealt for 10 seconds after transforming");
-            LocalizationManager.Instance.textTable.Add("Archangel Description","Pride of the Dominion Engineering Corps, a Archangel is the solution to almost any threat");
+            LocManager.textTable.Add("Fighter Mode Description","Trains the pilot to transform the Viking into a fighter jet gaining bonus damage against Moab's. Only targets Moab's in Fighter Mode");
+            LocManager.textTable.Add("Phobos Weapons Systems Description","Increases range and damage in both modes");
+            LocManager.textTable.Add("Deimos Description","Modified with questionable mercenary equipment. More pierce, damage, faster firing and can pop Lead Bloons");
+            LocManager.textTable.Add("Sky Fury Description","Doubles damage dealt for 10 seconds after transforming");
+            LocManager.textTable.Add("Archangel Description","Pride of the Dominion Engineering Corps, a Archangel is the solution to almost any threat");
             return details;
         }
-        public override TowerModel[]TowerModels(){
+        public override TowerModel[]GenerateTowerModels(){
             return new TowerModel[]{
                 Base(),
                 FighterMode(),
@@ -89,7 +92,7 @@ namespace Viking{
             };
         }
         public TowerModel Base(){
-            TowerModel viking=Game.instance.model.GetTowerFromId("DartMonkey").Clone<TowerModel>();
+            TowerModel viking=gameModel.GetTowerFromId("DartMonkey").Clone<TowerModel>();
             viking.name=Name;
             viking.baseId=viking.name;
             viking.towerSet=TowerSet.Magic;
@@ -134,7 +137,7 @@ namespace Viking{
             return viking;
         }
         public TowerModel AirMode(){
-            TowerModel viking=Game.instance.model.GetTowerFromId("DartMonkey").Clone<TowerModel>();
+            TowerModel viking=gameModel.GetTowerFromId("DartMonkey").Clone<TowerModel>();
             viking.name=Name+"-Air100";
             viking.baseId=viking.name;
             viking.towerSet=TowerSet.Magic;
@@ -351,7 +354,7 @@ namespace Viking{
             viking.behaviors=vikingBehav.ToArray();
             return viking;
         }
-        public override void Create(){
+        public override void Create(Tower tower){
             PlaySound("Viking-Birth");
         }
         public override void Upgrade(int tier,Tower tower){
