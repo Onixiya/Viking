@@ -3,7 +3,6 @@ using Il2CppAssets.Scripts.Models.Towers.Behaviors.Attack;
 using Il2CppAssets.Scripts.Models.Towers.Projectiles.Behaviors;
 using Il2CppAssets.Scripts.Models.TowerSets;
 using Il2CppAssets.Scripts.Models.Towers.Behaviors.Attack.Behaviors;
-using Il2CppNinjaKiwi.Common;
 using Il2CppAssets.Scripts.Models.Towers.Weapons;
 using MelonLoader;
 using SC2ExpansionLoader;
@@ -21,15 +20,15 @@ using UnityEngine;
 using Il2Cpp;
 using MelonLoader.Utils;
 using Il2CppAssets.Scripts.Models.Towers.Projectiles;
-using Il2CppAssets.Scripts.Unity.UI_New.Upgrade;
-using HarmonyLib;
 using Il2CppAssets.Scripts.Models.Towers.Behaviors.Emissions;
 using Il2CppAssets.Scripts.Models.Towers.Weapons.Behaviors;
 using Il2CppAssets.Scripts.Utils;
 using Il2CppAssets.Scripts.Models.Effects;
-using Il2CppAssets.Scripts.Models.Towers.Pets;
-using Il2CppAssets.Scripts.Simulation.Towers.Pets;
-using System.Reflection;
+using Il2CppInterop.Runtime;
+using Il2CppInterop.Runtime.InteropTypes.Arrays;
+using HarmonyLib;
+using Il2CppAssets.Scripts.Simulation.Towers.Behaviors.Abilities.Behaviors;
+using Il2CppAssets.Scripts.Simulation.Towers.Behaviors.Abilities;
 
 [assembly:MelonGame("Ninja Kiwi","BloonsTD6")]
 [assembly:MelonInfo(typeof(Viking.ModMain),Viking.ModHelperData.Name,Viking.ModHelperData.Version,"Silentstorm")]
@@ -61,10 +60,71 @@ namespace Viking{
             };
         }
         public override int MaxTier=>5;
-        public override int MaxSelectQuote=>7;
-        public override int MaxUpgradeQuote=>6;
-        public override Dictionary<string,string>SoundNames=>new(){{"Ground","Viking-"},{"Air","Viking-"},{"DeimosGround","Viking-"},{"DeimosAir","Viking-"},
-            {"SkyFuryGround","Viking-"},{"SkyFuryAir","Viking-"},{"Archangel","Viking-"}};
+        public override Dictionary<string,Il2CppSystem.Type>Components=>new(){{"Viking-Prefab",Il2CppType.Of<VikingCom>()}};
+		[RegisterTypeInIl2Cpp]
+        public class VikingCom:MonoBehaviour{
+            public VikingCom(IntPtr ptr):base(ptr){}
+			public GameObject activeObj=null;
+			public GameObject viking=null;
+			public GameObject vikingAir=null;
+			public GameObject deimos=null;
+			public GameObject deimosAir=null;
+			public GameObject skyFury=null;
+			public GameObject skyFuryAir=null;
+			public GameObject archangel=null;
+			public Tower tower=null;
+            float timer=0;
+			int selectSound=0;
+			int upgradeSound=0;
+			void Start(){
+				viking=transform.GetChild(0).gameObject;
+				vikingAir=transform.GetChild(1).gameObject;
+				deimos=transform.GetChild(2).gameObject;
+				deimosAir=transform.GetChild(3).gameObject;
+				skyFury=transform.GetChild(4).gameObject;
+				skyFuryAir=transform.GetChild(5).gameObject;
+				archangel=transform.GetChild(6).gameObject;
+				vikingAir.SetActive(false);
+				deimos.SetActive(false);
+				deimosAir.SetActive(false);
+				skyFury.SetActive(false);
+				skyFuryAir.SetActive(false);
+				archangel.SetActive(false);
+				viking.transform.localPosition=new(0,0,0);
+				vikingAir.transform.localPosition=new(0,0,0);
+				deimos.transform.localPosition=new(0,0,0);
+				deimosAir.transform.localPosition=new(0,0,0);
+				skyFury.transform.localPosition=new(0,0,0);
+				skyFuryAir.transform.localPosition=new(0,0,0);
+				archangel.transform.localPosition=new(0,0,0);
+				activeObj=viking;
+			}
+            void Update(){
+                timer+=Time.fixedDeltaTime;
+                if(timer>10){
+                    if(activeObj.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("Viking-Stand")){
+                        switch(new System.Random().Next(1,101)){
+                            case<16:
+                                PlayAnimation(activeObj.GetComponent<Animator>(),"Viking-Fidget",0.4f);
+                                break;
+                        }
+                    }
+                    timer=0;
+                }
+            }
+			public void PlaySelectSound(){
+				if(selectSound>5){
+					selectSound=0;
+				}
+				selectSound+=1;
+				PlaySound("Viking-Select"+selectSound);
+			}
+			public void PlayUpgradeSound(){
+				upgradeSound+=1;
+				selectSound=0;
+				PlaySound("Viking-Upgrade"+upgradeSound);
+			}
+        }
         public override ShopTowerDetailsModel ShopDetails(){
             ShopTowerDetailsModel details=Game.instance.model.towerSet[0].Clone<ShopTowerDetailsModel>();
             details.towerId=Name;
@@ -102,12 +162,13 @@ namespace Viking{
             viking.upgrades=new UpgradePathModel[]{new("Fighter Mode",Name+"-100")};
             viking.range=45;
             viking.radius=8;
-            viking.display=new(){guidRef="Viking-Ground-Prefab"};
+            viking.display=new(){guidRef="Viking-Prefab"};
             viking.icon=new(){guidRef="Ui[Viking-GroundIcon]"};
             viking.instaIcon=new(){guidRef="Ui[Viking-GroundIcon]"};
             viking.portrait=new(){guidRef="Ui[Viking-GroundPortrait]"};
-            viking.behaviors.GetModel<DisplayModel>().display=new(){guidRef="Viking-Ground-Prefab"};
+            viking.behaviors.GetModel<DisplayModel>().display=viking.display;
             AttackModel gatling=viking.behaviors.GetModel<AttackModel>();
+			gatling.name="Viking-Gatling";
             gatling.range=viking.range;
             AttackFilterModel attackFilter=gatling.behaviors.GetModel<AttackFilterModel>();
             List<FilterModel>attackFilters=attackFilter.filters.ToList();
@@ -143,14 +204,14 @@ namespace Viking{
             viking.towerSet=TowerSet.Magic;
             viking.tier=1;
             viking.tiers=new[]{1,0,0};
+			viking.display=new(){guidRef="Viking-AirPrefab"};
             viking.portrait=new(){guidRef="Ui[Viking-AirIcon]"};
-            viking.display=new(){guidRef="Viking-Air-Prefab"};
             viking.appliedUpgrades=new(new[]{"Fighter Mode"});
             viking.upgrades=new UpgradePathModel[0];
             viking.range=90;
             DisplayModel display=viking.behaviors.GetModel<DisplayModel>();
             display.positionOffset=new(0,0,190);
-            display.display=new(){guidRef="Viking-Air-Prefab"};
+			display.display=viking.display;
             AttackModel torpedoes=viking.behaviors.GetModel<AttackModel>();
             torpedoes.name="VikingTorpedoes";
             torpedoes.range=viking.range;
@@ -194,25 +255,31 @@ namespace Viking{
             transform.cooldown=1;
             transform.icon=new(){guidRef="Ui[Viking-AirIcon]"};
             transform.addedViaUpgrade="Fighter Mode";
+			List<Model>vikingBehav=viking.behaviors.ToList();
+			AttackModel torpedoes=vikingBehav.GetModel<AttackModel>().Clone<AttackModel>();
+            torpedoes.name="VikingTorpedoes";
+            torpedoes.range=viking.range;
+            torpedoes.addsToSharedGrid=false;
+            torpedoes.attackThroughWalls=true;
+            AttackFilterModel attackFilter=torpedoes.behaviors.GetModel<AttackFilterModel>();
+            List<FilterModel>filters=attackFilter.filters.ToList();
+            filters.Add(new FilterWithTagModel("FilterWithTagModel","Moabs",true));
+            attackFilter.filters=filters.ToArray();
+            WeaponModel torpedoesWep=torpedoes.weapons[0];
+            torpedoesWep.rate=0.8f;
+            ProjectileModel torpedoesProj=torpedoesWep.projectile;
+            torpedoesProj.display=new(){guidRef="Viking-MissilePrefab"};
+            torpedoesProj.pierce=1;
+            torpedoesProj.filters=attackFilter.filters;
+            DamageModel projDamage=torpedoesProj.behaviors.GetModel<DamageModel>();
+            projDamage.damage=5;
+            projDamage.immuneBloonProperties=(BloonProperties)2;
+            torpedoesProj.behaviors.GetModel<TravelStraitModel>().speed=700;
             List<Model>transformBehav=transform.behaviors.ToList();
-            transformBehav.Add(new MorphTowerModel("VikingTransform",false,0,"VikingTransform",9999999,false,true,AirMode(),
-                null,null,5,99999,1,"Viking-100",null,false,""));
+            transformBehav.Add(new ActivateAttackModel("Viking-Transform",5,false,new(new[]{torpedoes}),false,true,false,false,false));
             transform.behaviors=transformBehav.ToArray();
-            List<Model>vikingBehav=viking.behaviors.ToList();
             vikingBehav.Add(transform);
             viking.behaviors=vikingBehav.ToArray();
-            return viking;
-        }
-        public TowerModel AirPWS(){
-            TowerModel viking=AirMode().Clone<TowerModel>();
-            viking.name=Name+"-Air200";
-            viking.tier=2;
-            viking.tiers=new[]{2,0,0};
-            viking.range+=10;
-            viking.appliedUpgrades=new(new[]{"Fighter Mode","Phobos Weapons Systems"});
-            AttackModel torpedoes=viking.behaviors.GetModel<AttackModel>();
-            torpedoes.range=viking.range;
-            torpedoes.weapons[0].projectile.behaviors.GetModel<DamageModel>().damage+=5;
             return viking;
         }
         public TowerModel PWS(){
@@ -228,37 +295,9 @@ namespace Viking{
             foreach(WeaponModel weapon in gatling.weapons){
                 weapon.projectile.behaviors.GetModel<DamageModel>().damage+=2;
             }
-            viking.behaviors.GetModel<AbilityModel>().behaviors.GetModel<MorphTowerModel>().towerModel=AirPWS();
-            return viking;
-        }
-        public TowerModel AirDeimos(){
-            TowerModel viking=AirPWS().Clone<TowerModel>();
-            viking.name=Name+"-Air300";
-            viking.tier=3;
-            viking.tiers=new[]{3,0,0};
-            viking.display=new(){guidRef="Viking-DeimosAir-Prefab"};
-            viking.portrait=new(){guidRef="Ui[Viking-DeimosAirPortrait]"};
-            viking.appliedUpgrades=new(new[]{"Fighter Mode","Phobos Weapons Systems","Deimos"});
-            viking.upgrades=new UpgradePathModel[0];
-            List<Model>vikingBehav=viking.behaviors.ToList();
-            AttackModel wild=vikingBehav.GetModel<AttackModel>().Clone<AttackModel>();
-            wild.name="WILD";
-            wild.range+=50;
-            AttackFilterModel filter=wild.behaviors.GetModel<AttackFilterModel>();
-            List<FilterModel>filters=filter.filters.ToList();
-            filters.Add(new FilterWithTagModel("FilterWithTagModel","Moabs",false));
-            filter.filters=filters.ToArray();
-            WeaponModel weapon=wild.weapons[0];
-            weapon.emission=new RandomArcEmissionModel("RandomArcEmissionModel",8,30,90,10,10,null);
-            weapon.rate=1.05f;
-            ProjectileModel proj=weapon.projectile;
-            proj.display=new(){guidRef="Viking-MissilePrefab"};
-            List<Model>projBehav=proj.behaviors.ToList();
-            projBehav.Remove(projBehav.First(a=>a.GetIl2CppType().Name=="TravelStraitModel"));
-            projBehav.Add(new TravelCurvyModel("TravelCurvyModel",200,5,720,45));
-            proj.behaviors=projBehav.ToArray();
-            vikingBehav.Add(wild);
-            viking.behaviors=vikingBehav.ToArray();
+            AttackModel torpedos=viking.behaviors.GetModel<AbilityModel>().behaviors.GetModel<ActivateAttackModel>().attacks[0];
+			torpedos.range=viking.range;
+			torpedos.GetDescendant<DamageModel>().damage+=5;
             return viking;
         }
         public TowerModel Deimos(){
@@ -266,15 +305,34 @@ namespace Viking{
             viking.name=Name+"-300";
             viking.tier=3;
             viking.tiers=new[]{3,0,0};
-            viking.display=new(){guidRef="Viking-DeimosGround-Prefab"};
             viking.portrait=new(){guidRef="Ui[Viking-DeimosGroundPortrait]"};
             viking.behaviors.GetModel<DisplayModel>().display=viking.display;
             viking.appliedUpgrades=new(new[]{"Fighter Mode","Phobos Weapons Systems","Deimos"});
             viking.upgrades=new UpgradePathModel[]{new("Sky Fury",Name+"-400")};
-            AbilityModel transform=viking.behaviors.GetModel<AbilityModel>();
+			Il2CppReferenceArray<Model>vikingBehav=viking.behaviors;
+            AbilityModel transform=vikingBehav.GetModel<AbilityModel>();
             transform.icon=new(){guidRef="Ui[Viking-DeimosAirIcon]"};
-            transform.behaviors.GetModel<MorphTowerModel>().towerModel=AirDeimos();
-            foreach(WeaponModel weapon in viking.behaviors.GetModel<AttackModel>().weapons){
+			ActivateAttackModel transformAttack=transform.GetDescendant<ActivateAttackModel>();
+			List<AttackModel>transformAttacks=transformAttack.attacks.ToList();
+            AttackModel wild=transformAttacks[0].Clone<AttackModel>();
+            wild.name="WILD";
+            wild.range+=50;
+            AttackFilterModel filter=wild.behaviors.GetModel<AttackFilterModel>();
+            List<FilterModel>filters=filter.filters.ToList();
+            filters.Add(new FilterWithTagModel("FilterWithTagModel","Moabs",true));
+            filter.filters=filters.ToArray();
+            WeaponModel wildWeapon=wild.weapons[0];
+            wildWeapon.emission=new RandomArcEmissionModel("RandomArcEmissionModel",8,30,90,10,10,null);
+            wildWeapon.rate=1.05f;
+            ProjectileModel wildProj=wildWeapon.projectile;
+            wildProj.display=new(){guidRef="Viking-MissilePrefab"};
+            List<Model>projBehav=wildProj.behaviors.ToList();
+            projBehav.Remove(projBehav.First(a=>a.GetIl2CppType().Name=="TravelStraitModel"));
+            projBehav.Add(new TravelCurvyModel("TravelCurvyModel",200,5,720,45));
+            wildProj.behaviors=projBehav.ToArray();
+			transformAttacks.Add(wild);
+			transformAttack.attacks=transformAttacks.ToArray();
+            foreach(WeaponModel weapon in vikingBehav.GetModel<AttackModel>().weapons){
                 weapon.rate=0.55f;
                 ProjectileModel proj=weapon.projectile;
                 proj.pierce=3;
@@ -284,36 +342,18 @@ namespace Viking{
             }
             return viking;
         }
-        public TowerModel AirSkyFury(){
-            TowerModel viking=AirDeimos().Clone<TowerModel>();
-            viking.name=Name+"-Air400";
-            viking.tier=4;
-            viking.tiers=new[]{4,0,0};
-            viking.display=new(){guidRef="Viking-SkyFuryAir-Prefab"};
-            viking.appliedUpgrades=new(new[]{"Fighter Mode","Phobos Weapons Systems","Deimos","Sky Fury"});
-            viking.upgrades=new UpgradePathModel[0];
-            AbilityModel transform=viking.behaviors.GetModel<AbilityModel>();
-            transform.icon=new(){guidRef="Ui[Viking-SkyFuryAirIcon]"};
-            TurboModel turbo=transform.behaviors.GetModel<TurboModel>();
-            turbo.lifespan=10;
-            turbo.multiplier=2;
-            turbo.projectileRadiusScaleBonus=1.2f;
-            return viking;
-        }
         public TowerModel SkyFury(){
             TowerModel viking=Deimos().Clone<TowerModel>();
             viking.name=Name+"-400";
             viking.tier=4;
             viking.tiers=new[]{4,0,0};
-            viking.display=new(){guidRef="Viking-SkyFuryGround-Prefab"};
             viking.portrait=new(){guidRef="Ui[Viking-SkyFuryGroundPortrait]"};
             viking.appliedUpgrades=new(new[]{"Fighter Mode","Phobos Weapons Systems","Deimos","Sky Fury"});
             viking.upgrades=new UpgradePathModel[]{new("Archangel",Name+"-500")};
             AbilityModel transform=viking.behaviors.GetModel<AbilityModel>();
             transform.icon=new(){guidRef="Ui[Viking-SkyFuryAirIcon]"};
             List<Model>transformBehav=transform.behaviors.ToList();
-            transformBehav.Add(new TurboModel("TurboModel",10,2,null,0,1.2f,false));
-            transformBehav.GetModel<MorphTowerModel>().towerModel=AirSkyFury();
+            transformBehav.Add(new TurboModel("TurboModel",10,2,new("AssetPath",new(){guidRef="Viking-MissilePrefab"}),0,1.2f,false));
             return viking;
         }
         public TowerModel Archangel(){
@@ -321,7 +361,6 @@ namespace Viking{
             viking.name=Name+"-500";
             viking.tier=5;
             viking.tiers=new[]{5,0,0};
-            viking.display=new(){guidRef="Viking-Archangel-Prefab"};
             viking.portrait=new(){guidRef="Ui[Viking-ArchangelPortrait]"};
             viking.appliedUpgrades=new(new[]{"Fighter Mode","Phobos Weapons Systems","Deimos","Sky Fury","Archangel"});
             viking.upgrades=new UpgradePathModel[0];
@@ -342,8 +381,7 @@ namespace Viking{
                 damage.damage=11;
                 damage.immuneBloonProperties=0;
             }
-            AttackModel wild=vikingBehav.GetModel<AbilityModel>().behaviors.GetModel<MorphTowerModel>().towerModel.behaviors.
-                GetModel<AttackModel>("WILD").Clone<AttackModel>();
+            AttackModel wild=vikingBehav.GetModel<AbilityModel>().behaviors.GetModel<ActivateAttackModel>().attacks[1].Clone<AttackModel>();
             wild.range=viking.range+20;
             wild.weapons[0].emission=new RandomArcEmissionModel("RandomArcEmissionModel",16,0,45,0,10,null);
             wild.weapons[0].projectile.behaviors.GetModel<TravelCurvyModel>().maxTurnAngle=30;
@@ -358,31 +396,79 @@ namespace Viking{
             PlaySound("Viking-Birth");
         }
         public override void Upgrade(int tier,Tower tower){
+			VikingCom com=tower.Node.graphic.GetComponent<VikingCom>();
+			if(com.tower==null){
+				com.tower=tower;
+			}
             switch(tier){
                 case 3:
-                    PlaySound("Viking-Upgrade3");
+					com.activeObj.SetActive(false);
+					com.activeObj=com.deimos;
+					com.activeObj.SetActive(true);
                     break;
                 case 4:
-                    PlaySound("Viking-Upgrade4");
+					com.activeObj.SetActive(false);
+					com.activeObj=com.skyFury;
+					com.activeObj.SetActive(true);
                     break;
                 case 5:
-                    PlaySound("Viking-Upgrade5");
+					com.activeObj.SetActive(false);
+					com.activeObj=com.archangel;
+					com.activeObj.SetActive(true);
                     break;
-                default:
-                    tower.Node.graphic.gameObject.GetComponent<SC2Sound>().PlayUpgradeSound();
-                    break;
-            }
+			}
+            com.PlayUpgradeSound();
         }
         public override void Select(Tower tower){
-            tower.Node.graphic.gameObject.GetComponent<SC2Sound>().PlaySelectSound();
+            tower.Node.graphic.gameObject.GetComponent<VikingCom>().PlaySelectSound();
         }
         public override void Attack(Weapon weapon){
-            PlayAnimation(weapon.attack.tower.Node.graphic,"Viking-Attack");
+            PlayAnimation(weapon.attack.tower.Node.graphic.GetComponent<VikingCom>().activeObj.GetComponent<Animator>(),"Viking-Attack");
         }
-        public override void Ability(string ability,Tower tower){
-            if(ability=="AbilityModel_VikingAirTransform"){
-                tower.RemoveMutatorsById("VikingTransform");
+        public override bool Ability(string ability,Tower tower){
+            if(ability=="VikingTransform"){
+                VikingCom com=tower.Node.graphic.GetComponent<VikingCom>();
+				com.activeObj.SetActive(false);
+				switch(tower.towerModel.tier){
+					case 1 or 2:
+						com.activeObj=com.vikingAir;
+						break;
+					case 3:
+						com.activeObj=com.deimosAir;
+						break;
+					case 4:
+						com.activeObj=com.skyFuryAir;
+						break;
+				}
+				com.activeObj.SetActive(true);
+				com.tower.attackBehaviorsInDependants[0].attack.range=0;
+				tower.Position.Z=190;
             }
+			return true;
         }
+		[HarmonyPatch(typeof(ActivateAttack),"RemoveProcess")]
+		public class ActivateAttackRemoveProcess_Patch{
+			public static void Postfix(ref ActivateAttack __instance){
+				Ability ability=__instance.entity.dependants[0].Cast<Ability>();
+				if(ability.abilityModel.name=="VikingTransform"){
+					VikingCom com=ability.tower.Node.graphic.GetComponent<VikingCom>();
+					com.activeObj.SetActive(false);
+					switch(ability.tower.towerModel.tier){
+						case 1 or 2:
+							com.activeObj=com.viking;
+							break;
+						case 3:
+							com.activeObj=com.deimos;
+							break;
+						case 4:
+							com.activeObj=com.skyFury;
+							break;
+					}
+					com.activeObj.SetActive(true);
+					com.tower.attackBehaviorsInDependants[0].attack.range=com.tower.towerModel.behaviors.GetModel<AttackModel>().range;
+					ability.tower.Position.Z=0;
+				}
+			}
+		}
     }
 }
